@@ -23,7 +23,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         sendingSocket("hi");
         chooseLeader();
         sendingSocket(leader + " este e o lider");
-        
+
     }
 
     /*PlacesManager(int port2) throws IOException{
