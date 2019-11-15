@@ -19,11 +19,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         addr = InetAddress.getByName("224.0.0.3");
         s = new MulticastSocket(port);
         s.joinGroup(addr);
-        receivingMsg();
         sendingSocket("hi");
+        receivingMsg();
         chooseLeader();
         sendingSocket(leader + " este e o lider");
-
     }
 
     /*PlacesManager(int port2) throws IOException{
@@ -71,6 +70,8 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         t1.start();
        //System.out.println("AAAAAAAAA");
     }*/
+
+    //a escolha do leader e feita do houver alteracao no array
     private void chooseLeader()
     {
         for(String a: placeManagerList)
