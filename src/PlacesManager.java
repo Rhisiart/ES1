@@ -107,10 +107,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     @Override
     public void sendingSocket(String mensage) throws IOException
     {
-        String msgPlusUrl = "Enviado por " + urlPlace + " " +  mensage;
+        String msgPlusUrl = urlPlace + " " +  mensage;
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
         s.send(hi);
-        System.out.println(msgPlusUrl);
+        System.out.println("Enviado por " + msgPlusUrl);
     }
 
     private void receivingMsg()
@@ -137,10 +137,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         {
             s.receive(recv);
             String msg = new String(buf);
-            String _port = msg.substring(28, 32);
-            String mensage = msg.substring(43, 47);
-            System.out.println(msg);
-            System.out.println("PlaceManager: " + urlPlace);
+            String _port = msg.substring(16, 20);
+            String mensage = msg.substring(31, 35);
+            System.out.println("Mensagem recebida: " + msg);
+            System.out.println("Pelo PlaceManager: " + urlPlace);
             if (!placeManagerList.contains(_port)) {
                 placeManagerList.add(_port);
             }
