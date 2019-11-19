@@ -9,6 +9,4 @@ public interface PlacesListInterface extends Remote {
     void addPlace(Place p) throws RemoteException, MalformedURLException, NotBoundException;
     ArrayList<Place> allPlaces() throws RemoteException;
     Place getPlace(String codigoPostal) throws RemoteException;
-    void sendingSocket(String mensage) throws IOException;
-    int chooseLeader()throws RemoteException;
 }

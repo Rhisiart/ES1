@@ -14,103 +14,46 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private String urlPlace;
     private byte[] buf = new byte[100];
 
+
     PlacesManager(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
         addr = InetAddress.getByName("224.0.0.3");
         s = new MulticastSocket(port);
         s.joinGroup(addr);
-        //sendingSocket("hi");
+        sendingSocket("ola");
         receivingMsg();
-        //chooseLeader();
-        //System.out.println(leader);
-        //sendingSocket(leader + " este e o lider");
     }
 
-    /*PlacesManager(int port2) throws IOException{
-        urlPlace = "rmi://localhost:" + port2 + "/placelist";
-        addr = InetAddress.getByName("224.0.0.3");
-        s = new MulticastSocket(port);
-        s.joinGroup(addr);
-        DatagramPacket recv = new DatagramPacket(buf, buf.length);
+    private String chooseLeader() throws RemoteException {
+        String biggerHash = "";
+        int length = 0;
+        for (String a : placeManagerList) {
+            if (a.length() > length) {
+                biggerHash = a;
+            }
+        }
+        return biggerHash;
+    }
+
+    private void sendingSocket(String mensage) throws IOException {
+        String msgPlusUrl = mensage + "," + urlPlace;
         Thread t1 = (new Thread(() -> {
-            while (true){
-                String mensage = "";
+            while (true) {
+                DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
                 try {
-                    s.receive(recv);
-                    String msg = new String(buf);
-                    String _port = msg.substring(28, 32);
-                    mensage = msg.substring(43, 47);
-                    System.out.println("Mensagem recebida: " + msg);
-                    System.out.println("PlaceManager: " + urlPlace);
-                    if (!placeManagerList.contains(_port)) {
-                        placeManagerList.add(_port);
-                    }
+                    s.send(hi);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-               if(mensage.equals("null"))
-                {
-                    break;
+                System.out.println("Mensagem enviado: " + msgPlusUrl);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-
-        }
-            int length = 0;
-            for(String a: placeManagerList)
-            {
-               if(Integer.parseInt(a) > length )
-               {
-                   length = Integer.parseInt(a);
-               }
-            }
-            try {
-                sendingSocket(Integer.toString(length) + " este e o lider");
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }));
         t1.start();
-       //System.out.println("AAAAAAAAA");
-    }*/
-
-    @Override
-    public  int chooseLeader() throws RemoteException
-    {
-        int leader = 0;
-        for(String a: placeManagerList)
-        {
-            if(Integer.parseInt(a) > leader )
-            {
-                leader = Integer.parseInt(a);
-            }
-        }
-        placeManagerList.clear();
-        return leader;
-    }
-
-    /*private void sendingMsg(String msg)
-    {
-        Thread t1 = (new Thread(() -> {
-        try {
-            sendingSocket(msg);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
-            Thread.sleep(30*1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }));
-        t1.start();
-    }*/
-
-    @Override
-    public void sendingSocket(String mensage) throws IOException
-    {
-        String msgPlusUrl = urlPlace + " " +  mensage;
-        DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
-        s.send(hi);
-        System.out.println("Enviado por " + msgPlusUrl);
     }
 
     private void receivingMsg()
@@ -122,7 +65,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(30*1000);
+                    Thread.sleep(1000L);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -137,15 +80,14 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         {
             s.receive(recv);
             String msg = new String(buf);
-            String _port = msg.substring(16, 20);
-            String mensage = msg.substring(31, 35);
+            String[] hash = msg.split(",");
+            String _hash = hash[1];
             System.out.println("Mensagem recebida: " + msg);
             System.out.println("Pelo PlaceManager: " + urlPlace);
-            if (!placeManagerList.contains(_port)) {
-                placeManagerList.add(_port);
+            if (!placeManagerList.contains(_hash)) {
+                placeManagerList.add(_hash);
             }
-
-            if(mensage.equals("null"))
+            if(hash[0].equals("null"))
             {
                 break;
             }
