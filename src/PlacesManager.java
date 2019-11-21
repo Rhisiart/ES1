@@ -21,21 +21,21 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         s = new MulticastSocket(port);
         s.joinGroup(addr);
         sendingSocket("ola");
-        receivingMsg();
+        receivingSocket();
     }
 
-    private String chooseLeader() throws RemoteException {
-        String biggerHash = "";
+    private String chooseLeader()  {
+        String biggestHash = "";
         int length = 0;
         for (String a : placeManagerList) {
-            if (a.length() > length) {
-                biggerHash = a;
+            if ((-1*a.hashCode()) > length) {
+                biggestHash = a;
             }
         }
-        return biggerHash;
+        return biggestHash;
     }
 
-    private void sendingSocket(String mensage) throws IOException {
+    private void sendingSocket(String mensage)  {
         String msgPlusUrl = mensage + "," + urlPlace;
         Thread t1 = (new Thread(() -> {
             while (true) {
@@ -47,7 +47,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 }
                 System.out.println("Mensagem enviado: " + msgPlusUrl);
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -56,44 +56,41 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         t1.start();
     }
 
-    private void receivingMsg()
-    {
-        Thread t1 = (new Thread(() -> {
-                try {
-                    receivingSocket();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                try {
-                    Thread.sleep(1000L);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-        }));
-        t1.start();
-    }
 
-    private void receivingSocket() throws IOException
+    private void receivingSocket() 
     {
         DatagramPacket recv = new DatagramPacket(buf, buf.length);
-        while (true)
-        {
-            s.receive(recv);
-            String msg = new String(buf);
-            String[] hash = msg.split(",");
-            String _hash = hash[1];
-            System.out.println("Mensagem recebida: " + msg);
-            System.out.println("Pelo PlaceManager: " + urlPlace);
-            if (!placeManagerList.contains(_hash)) {
-                placeManagerList.add(_hash);
+        Thread t1 = (new Thread(() -> {
+            while (true) {
+                try {
+                    s.receive(recv);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                String msg = new String(buf);
+                String[] hash = msg.split(",");
+                String _hash = hash[1];
+                System.out.println("Mensagem recebida: " + msg);
+                System.out.println("Pelo PlaceManager: " + urlPlace);
+                if (!placeManagerList.contains(_hash)) {
+                    placeManagerList.add(_hash);
+                }
+                System.out.println(chooseLeader());
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+               /* if(hash[0].equals("null"))
+                {
+                    break;
+                }
             }
-            if(hash[0].equals("null"))
-            {
-                break;
+            s.leaveGroup(addr);
+            s.close();*/
             }
-        }
-        s.leaveGroup(addr);
-        s.close();
+        }));
+        t1.start();
     }
 
 
