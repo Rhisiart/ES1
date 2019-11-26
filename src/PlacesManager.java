@@ -7,7 +7,7 @@ import java.util.SplittableRandom;
 
 public class PlacesManager extends UnicastRemoteObject implements PlacesListInterface {
     private static ArrayList<Place> placeArrayList = new ArrayList<>();
-    private static ArrayList<String> placeManagerList = new ArrayList<>();
+    private  ArrayList<String> placeManagerList = new ArrayList<>();
     private static InetAddress addr;
     private static int port = 8888;
     private MulticastSocket s;
@@ -57,7 +57,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     }
 
 
-    private void receivingSocket() 
+    private void receivingSocket()
     {
         DatagramPacket recv = new DatagramPacket(buf, buf.length);
         Thread t1 = (new Thread(() -> {
@@ -77,7 +77,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 }
                 System.out.println(chooseLeader());
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
