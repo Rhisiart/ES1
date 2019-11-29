@@ -3,20 +3,17 @@ import java.net.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class PlacesManager extends UnicastRemoteObject implements PlacesListInterface {
-    private static ArrayList<Place> placeArrayList = new ArrayList<>();
+    private ArrayList<Place> placeArrayList = new ArrayList<>();
     private  ArrayList<String> placeManagerList = new ArrayList<>();
-    private static HashMap<Integer, ArrayList<String>> placeHashTimer = new HashMap<>();
-    private static InetAddress addr;
+    private HashMap<Integer, ArrayList<String>> placeHashTimer = new HashMap<>();
+    private InetAddress addr;
     private static int port = 8888;
     private MulticastSocket s;
     private String urlPlace;
     private byte[] buf = new byte[100];
-    private static int ts = 0;
-    private int count = 0;
-
+    private int ts = 0;
 
     PlacesManager(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
@@ -42,15 +39,13 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private void compareHashMap()
     {
        if(placeHashTimer.containsKey(ts) && placeHashTimer.containsKey(ts-5000)){
-           //System.out.println(placeHashTimer.get(ts));
-           //System.out.println(placeHashTimer.get(ts-5000));
            ArrayList<String> placeUrlList = placeHashTimer.get(ts);
            ArrayList<String> placeUrlListCopy = placeHashTimer.get(ts-5000);
            for(String a : placeUrlList)
            {
                if(!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) System.out.println("o lider e : " + chooseLeader());
            }
-        }
+        }else  System.out.println("o lider e : " + chooseLeader());
     }
 
     private void sendingSocket(String mensage)  {
