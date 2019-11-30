@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 public class PlacesManager extends UnicastRemoteObject implements PlacesListInterface {
     private ArrayList<Place> placeArrayList = new ArrayList<>();
-    private  ArrayList<String> placeManagerList = new ArrayList<>();
+    private ArrayList<String> placeManagerList = new ArrayList<>();
     private HashMap<Integer, ArrayList<String>> placeHashTimer = new HashMap<>();
     private InetAddress addr;
     private static int port = 8888;
@@ -20,6 +20,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         addr = InetAddress.getByName("224.0.0.3");
         s = new MulticastSocket(port);
         s.joinGroup(addr);
+        placeHashTimer.put(ts,new ArrayList<>());
         sendingSocket("ola");
         receivingSocket();
     }
@@ -45,7 +46,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
            {
                if(!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) System.out.println("o lider e : " + chooseLeader());
            }
-        }else  System.out.println("o lider e : " + chooseLeader());
+        }
     }
 
     private void sendingSocket(String mensage)  {
