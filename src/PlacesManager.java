@@ -7,12 +7,13 @@ import java.util.HashMap;
 public class PlacesManager extends UnicastRemoteObject implements PlacesListInterface {
     private ArrayList<Place> placeArrayList = new ArrayList<>();
     private ArrayList<String> placeManagerList = new ArrayList<>();
+    private ArrayList<String> voteList = new ArrayList<>();
     private HashMap<Integer, ArrayList<String>> placeHashTimer = new HashMap<>();
     private InetAddress addr;
     private static int port = 8888;
     private MulticastSocket s;
     private String urlPlace;
-    private byte[] buf = new byte[100];
+    private byte[] buf = new byte[1000];
     private int ts = 0;
 
     PlacesManager(int port2) throws IOException {
@@ -36,15 +37,34 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
         return biggestHash;
     }
+    //funcao para haver consenso na escolha do lider, atraves da maioria, se um place escolher o lider que nao foi da maioria tera que fazer o processo novamente
+    private void majorityVote()
+    {
+        String leader = "";
+        for (String a : voteList)
+        {
+            if (!a.equals(voteList.get(0)) || voteList.size() == 1) {
+                leader = "";
+               break;
+            }
+            leader = a;
+        }
+        if(leader.equals("")) voteList.clear();
+        else  System.out.println("o lider por unamidade e " + leader);
+    }
 
     private void compareHashMap()
     {
        if(placeHashTimer.containsKey(ts) && placeHashTimer.containsKey(ts-5000)){
            ArrayList<String> placeUrlList = placeHashTimer.get(ts);
            ArrayList<String> placeUrlListCopy = placeHashTimer.get(ts-5000);
-           for(String a : placeUrlList)
-           {
-               if(!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) System.out.println("o lider e : " + chooseLeader());
+           for(String a : placeUrlList) {
+               if (!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) {
+                   String leader = chooseLeader();
+                   System.out.println("o lider e : " + leader);
+                   sendingSocket("voto," + leader);
+                   break;
+               }
            }
         }
     }
@@ -83,13 +103,17 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     e.printStackTrace();
                 }
                 String msg = new String(buf);
-                String[] hash = msg.split(",");
-                String _hash = hash[1];
+                String[] hash = msg.split(",",2);
+                /*if(hash[0].equals("voto"))
+                {
+                    voteList.add(hash[1]);
+                    majorityVote();
+                }*/
                 System.out.println("Mensagem recebida: " + msg);
                 System.out.println("Pelo PlaceManager: " + urlPlace);
-                if(!placeManagerList.contains(_hash))
+                if(!placeManagerList.contains(hash[1]))
                 {
-                    placeManagerList.add(_hash);
+                    placeManagerList.add(hash[1]);
                 }
                 placeHashTimer.put(ts,placeManagerList);
                 compareHashMap();
