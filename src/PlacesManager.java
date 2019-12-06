@@ -13,7 +13,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private static int port = 8888;
     private MulticastSocket s;
     private String urlPlace;
-    private byte[] buf = new byte[1000];
+    private byte[] buf = new byte[10000];
     private int ts = 0;
 
     PlacesManager(int port2) throws IOException {
@@ -32,8 +32,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         ArrayList<String> place = placeHashTimer.get(ts);
         for (String a : place)
         {
-            if((-1*a.hashCode() > length))
+            if((-1*a.hashCode()) > length){
+                length = -1*a.hashCode();
                 biggestHash = a;
+            }
         }
         return biggestHash;
     }
@@ -62,7 +64,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                if (!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) {
                    String leader = chooseLeader();
                    System.out.println("o lider e : " + leader);
-                   sendingSocket("voto," + leader);
+                   //sendingSocket("voto," + leader);
                    break;
                }
            }
