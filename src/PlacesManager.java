@@ -2,19 +2,22 @@ import java.io.IOException;
 import java.net.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 
 public class PlacesManager extends UnicastRemoteObject implements PlacesListInterface {
     private ArrayList<Place> placeArrayList = new ArrayList<>();
     private ArrayList<String> placeManagerList = new ArrayList<>();
-    private ArrayList<String> voteList = new ArrayList<>();
+    private HashMap<String, Integer> voteHash = new HashMap<>();
     private HashMap<Integer, ArrayList<String>> placeHashTimer = new HashMap<>();
     private InetAddress addr;
     private static int port = 8888;
     private MulticastSocket s;
     private String urlPlace;
-    private byte[] buf = new byte[10000];
+    private byte[] buf = new byte[100];
     private int ts = 0;
+    private int tsVote = 5000;
 
     PlacesManager(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
@@ -42,17 +45,24 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     //funcao para haver consenso na escolha do lider, atraves da maioria, se um place escolher o lider que nao foi da maioria tera que fazer o processo novamente
     private void majorityVote()
     {
-        String leader = "";
-        for (String a : voteList)
+        if (!(voteHash.size() > 1))
         {
-            if (!a.equals(voteList.get(0)) || voteList.size() == 1) {
-                leader = "";
-               break;
+            for (Map.Entry me : voteHash.entrySet()) {
+                System.out.println("o lider por unamidade e " + me.getKey());
             }
-            leader = a;
         }
-        if(leader.equals("")) voteList.clear();
-        else  System.out.println("o lider por unamidade e " + leader);
+        tsVote = ts;
+    }
+
+    private void modifyHash(String leader)
+    {
+        if(tsVote != ts) voteHash.clear();
+        if(!voteHash.containsKey(leader)) voteHash.put(leader,1);
+        else
+        {
+            int numVote = voteHash.get(leader);
+            voteHash.replace(leader,numVote,numVote + 1);
+        }
     }
 
     private void compareHashMap()
@@ -63,8 +73,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
            for(String a : placeUrlList) {
                if (!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) {
                    String leader = chooseLeader();
+                   modifyHash(leader);
                    System.out.println("o lider e : " + leader);
-                   //sendingSocket("voto," + leader);
+                   sendingSocket("voto," + leader);
                    break;
                }
            }
@@ -75,7 +86,8 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         String msgPlusUrl = mensage + "," + urlPlace;
         Thread t1 = (new Thread(() -> {
             while (true) {
-                ts += 5000;
+                String[] array = mensage.split(",");
+                if (!array[0].equals("voto")) ts += 5000;
                 DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
                 try {
                     s.send(hi);
@@ -106,18 +118,18 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 }
                 String msg = new String(buf);
                 String[] hash = msg.split(",",2);
-                /*if(hash[0].equals("voto"))
+                if(hash[0].equals("voto"))
                 {
-                    voteList.add(hash[1]);
+                    modifyHash(hash[1]);
                     majorityVote();
-                }*/
-                System.out.println("Mensagem recebida: " + msg);
-                System.out.println("Pelo PlaceManager: " + urlPlace);
-                if(!placeManagerList.contains(hash[1]))
+                }
+                else if(!placeManagerList.contains(hash[1]))
                 {
                     placeManagerList.add(hash[1]);
                 }
                 placeHashTimer.put(ts,placeManagerList);
+                System.out.println("Mensagem recebida: " + msg);
+                System.out.println("Pelo PlaceManager: " + urlPlace);
                 compareHashMap();
                 try {
                     Thread.sleep(1000);
