@@ -33,8 +33,11 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         String biggestHash = "";
         int length = 0;
         ArrayList<String> place = placeHashTimer.get(ts);
+        System.out.println(placeManagerList.size() + " " + urlPlace);
         for (String a : place)
         {
+            //System.out.println("a " + a + " seu comprimento " + length + " do place " + (-1*a.hashCode()));
+            ///System.out.println("place " + urlPlace);
             if((-1*a.hashCode()) > length){
                 length = -1*a.hashCode();
                 biggestHash = a;
@@ -45,6 +48,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     //funcao para haver consenso na escolha do lider, atraves da maioria, se um place escolher o lider que nao foi da maioria tera que fazer o processo novamente
     private void majorityVote()
     {
+        //o voto tem que ser superior 1
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry me : voteHash.entrySet()) {
@@ -59,10 +63,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         if(tsVote != ts) voteHash.clear();
         if(!voteHash.containsKey(leader)) voteHash.put(leader,1);
         else
-        {
-            int numVote = voteHash.get(leader);
-            voteHash.replace(leader,numVote,numVote + 1);
-        }
+            voteHash.replace(leader,voteHash.get(leader),voteHash.get(leader) + 1);
     }
 
     private void compareHashMap()
@@ -73,7 +74,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
            for(String a : placeUrlList) {
                if (!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) {
                    String leader = chooseLeader();
-                   modifyHash(leader);
+                  // modifyHash(leader);
                    System.out.println("o lider e : " + leader);
                    sendingSocket("voto," + leader);
                    break;
@@ -120,8 +121,8 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 String[] hash = msg.split(",",2);
                 if(hash[0].equals("voto"))
                 {
-                    modifyHash(hash[1]);
-                    majorityVote();
+                    //modifyHash(hash[1]);
+                    //majorityVote();
                 }
                 else if(!placeManagerList.contains(hash[1]))
                 {
