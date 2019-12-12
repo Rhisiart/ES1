@@ -56,27 +56,26 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
         leader = biggestHash;
     }
-    //funcao para haver consenso na escolha do lider, atraves da maioria, se um place escolher o lider que nao foi da maioria tera que fazer o processo novamente
-    private void majorityVote() throws IOException {
-        //o voto tem que ser superior 1
+
+    private void majorityVote() {
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
                 if (!me.getValue().equals(1)) {
                     System.out.println("o lider por unamidade e " + me.getKey());
-                    sendingSocket("lider");
-                } else sendingSocket("ola");
+                    //sendingSocket("lider");
+                }
             }
-        } else sendingSocket("ola");
+        }
         tsVote = ts;
     }
 
-    private void modifyHash(String leader)
+    private void modifyHash(String vote)
     {
         if(tsVote != ts) voteHash.clear();
-        if(!voteHash.containsKey(leader)) voteHash.put(leader,1);
+        if(!voteHash.containsKey(vote)) voteHash.put(vote,1);
         else
-            voteHash.replace(leader,voteHash.get(leader),voteHash.get(leader) + 1);
+            voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
     }
 
     private void compareHashMap() throws IOException {
@@ -87,6 +86,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 if (!(placeHashTimer.get(ts-5000).contains(a)) || placeHashTimer.get(ts).size() < placeHashTimer.get(ts-5000).size())
                 {
                     chooseLeader();
+                    //modifyHash(leader);
                     System.out.println("O voto para lider e " + leader + " pelo " + urlPlace);
                     sendingSocket("voto");
                     break;
@@ -119,18 +119,11 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 s.receive(recv);
                 String msg = new String(recv.getData());
                 String[] hash = msg.split(",");
-                /*switch (hash[0]){
-                    case "voto":
-                        modifyHash(hash[1]);
-                        majorityVote();
-                        if(!placeManagerList.contains(hash[2])) placeManagerList.add(hash[2]);
-                        break;
-                }
                 if(hash[0].equals("voto"))
                 {
-                    //modifyHash(hash[2]);
-                    //majorityVote();
-                }*/
+                    modifyHash(hash[2]);
+                    majorityVote();
+                }
                 if(!placeManagerList.contains(hash[1])) placeManagerList.add(hash[1]);
                 ArrayList<String> clone = new ArrayList<>(placeManagerList);
                 placeHashTimer.put(ts,clone);
