@@ -20,7 +20,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private static int port = 8888;
     private MulticastSocket s;
     private String urlPlace;
-    private static int ts = 0;
+    private int ts = 0;
     private int tsVote = 5000;
     private String leader = "";
     private boolean exit = true;
@@ -87,7 +87,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 if (!(placeHashTimer.get(ts-5000).contains(a)) || placeHashTimer.get(ts).size() < placeHashTimer.get(ts-5000).size())
                 {
                     chooseLeader();
-                    System.out.println("O lider e " + leader);
+                    System.out.println("O voto para lider e " + leader + " pelo " + urlPlace);
                     sendingSocket("voto");
                     break;
                 }
