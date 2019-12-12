@@ -9,6 +9,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class PlacesManager extends UnicastRemoteObject implements PlacesListInterface {
     private ArrayList<Place> placeArrayList = new ArrayList<>();
@@ -19,7 +20,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private static int port = 8888;
     private MulticastSocket s;
     private String urlPlace;
-    private int ts = 0;
+    private static int ts = 0;
     private int tsVote = 5000;
     private String leader = "";
     private boolean exit = true;
@@ -44,10 +45,11 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private void chooseLeader()  {
         String biggestHash = "";
         int length = 0;
-        ArrayList<String> place = placeHashTimer.get(ts);
-        System.out.println(placeManagerList.size() + " " + urlPlace);
-        for (String a : place) {
-            if ((a.hashCode()) > length) {
+        int i ;
+        for (String a : placeManagerList) {
+            if (a.hashCode() < 0) i = -1*a.hashCode();
+            else i = a.hashCode();
+            if (i > length) {
                 length = a.hashCode();
                 biggestHash = a;
             }
@@ -59,7 +61,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         //o voto tem que ser superior 1
         if (!(voteHash.size() > 1))
         {
-            for (Map.Entry me : voteHash.entrySet()) {
+            for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
                 if (!me.getValue().equals(1)) {
                     System.out.println("o lider por unamidade e " + me.getKey());
                     sendingSocket("lider");
@@ -78,16 +80,16 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     }
 
     private void compareHashMap() throws IOException {
-        if(placeHashTimer.containsKey(ts) && placeHashTimer.containsKey(ts-5000)){
-            ArrayList<String> placeUrlList = placeHashTimer.get(ts);
-            ArrayList<String> placeUrlListCopy = placeHashTimer.get(ts-5000);
-            for(String a : placeUrlList) {
-                if (!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) {
-                   chooseLeader();
-                   modifyHash(leader);
-                   System.out.println("o lider e : " + leader);
-                   sendingSocket("voto");
-                   break;
+        if (placeHashTimer.containsKey(ts) && placeHashTimer.containsKey(ts-5000))
+        {
+            for (String a : placeHashTimer.get(ts))
+            {
+                if (!(placeHashTimer.get(ts-5000).contains(a)) || placeHashTimer.get(ts).size() < placeHashTimer.get(ts-5000).size())
+                {
+                    chooseLeader();
+                    System.out.println("O lider e " + leader);
+                    sendingSocket("voto");
+                    break;
                 }
             }
         }
@@ -97,20 +99,20 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         String msgPlusUrl = "";
         switch (msg){
             case "ola":
-                msgPlusUrl = msg + "," + urlPlace;
-                ts += 5000;
+                msgPlusUrl = msg + "," + urlPlace + ",";
                 break;
             case "voto":
                 msgPlusUrl = msg + "," + urlPlace + "," + leader;
                 break;
         }
+        ts+=5000;
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
         DatagramSocket dS = new DatagramSocket();
         dS.send(hi);
         System.out.println("Mensagem enviado: " + msgPlusUrl);
     }
 
-    private void receivingSocket() throws IOException {
+    private void receivingSocket() throws IOException{
             while (exit) {
                 byte[] buf = new byte[1024];
                 DatagramPacket recv = new DatagramPacket(buf, buf.length);
@@ -123,14 +125,15 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                         majorityVote();
                         if(!placeManagerList.contains(hash[2])) placeManagerList.add(hash[2]);
                         break;
-                }*/
+                }
                 if(hash[0].equals("voto"))
                 {
-                    modifyHash(hash[2]);
-                    majorityVote();
-                }
+                    //modifyHash(hash[2]);
+                    //majorityVote();
+                }*/
                 if(!placeManagerList.contains(hash[1])) placeManagerList.add(hash[1]);
-                placeHashTimer.put(ts,placeManagerList);
+                ArrayList<String> clone = new ArrayList<>(placeManagerList);
+                placeHashTimer.put(ts,clone);
                 System.out.println("Mensagem recebida: " + msg);
                 System.out.println("Pelo PlaceManager: " + urlPlace);
                 compareHashMap();
