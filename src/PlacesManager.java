@@ -1,8 +1,12 @@
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
+
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,9 +19,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private static int port = 8888;
     private MulticastSocket s;
     private String urlPlace;
-    private byte[] buf = new byte[100];
     private int ts = 0;
     private int tsVote = 5000;
+    private String leader = "";
+    private boolean exit = true;
 
     PlacesManager(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
@@ -25,36 +30,42 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         s = new MulticastSocket(port);
         s.joinGroup(addr);
         placeHashTimer.put(ts,new ArrayList<>());
+        Thread t1 = (new Thread(() -> {
+            try {
+                receivingSocket();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }));
+        t1.start();
         sendingSocket("ola");
-        receivingSocket();
     }
 
-    private String chooseLeader()  {
+    private void chooseLeader()  {
         String biggestHash = "";
         int length = 0;
         ArrayList<String> place = placeHashTimer.get(ts);
         System.out.println(placeManagerList.size() + " " + urlPlace);
-        for (String a : place)
-        {
-            //System.out.println("a " + a + " seu comprimento " + length + " do place " + (-1*a.hashCode()));
-            ///System.out.println("place " + urlPlace);
-            if((-1*a.hashCode()) > length){
-                length = -1*a.hashCode();
+        for (String a : place) {
+            if ((a.hashCode()) > length) {
+                length = a.hashCode();
                 biggestHash = a;
             }
         }
-        return biggestHash;
+        leader = biggestHash;
     }
     //funcao para haver consenso na escolha do lider, atraves da maioria, se um place escolher o lider que nao foi da maioria tera que fazer o processo novamente
-    private void majorityVote()
-    {
+    private void majorityVote() throws IOException {
         //o voto tem que ser superior 1
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry me : voteHash.entrySet()) {
-                System.out.println("o lider por unamidade e " + me.getKey());
+                if (!me.getValue().equals(1)) {
+                    System.out.println("o lider por unamidade e " + me.getKey());
+                    sendingSocket("lider");
+                } else sendingSocket("ola");
             }
-        }
+        } else sendingSocket("ola");
         tsVote = ts;
     }
 
@@ -66,87 +77,66 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             voteHash.replace(leader,voteHash.get(leader),voteHash.get(leader) + 1);
     }
 
-    private void compareHashMap()
-    {
-       if(placeHashTimer.containsKey(ts) && placeHashTimer.containsKey(ts-5000)){
-           ArrayList<String> placeUrlList = placeHashTimer.get(ts);
-           ArrayList<String> placeUrlListCopy = placeHashTimer.get(ts-5000);
-           for(String a : placeUrlList) {
-               if (!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) {
-                   String leader = chooseLeader();
-                  // modifyHash(leader);
+    private void compareHashMap() throws IOException {
+        if(placeHashTimer.containsKey(ts) && placeHashTimer.containsKey(ts-5000)){
+            ArrayList<String> placeUrlList = placeHashTimer.get(ts);
+            ArrayList<String> placeUrlListCopy = placeHashTimer.get(ts-5000);
+            for(String a : placeUrlList) {
+                if (!placeUrlListCopy.contains(a) || placeUrlList.size() < placeUrlListCopy.size()) {
+                   chooseLeader();
+                   modifyHash(leader);
                    System.out.println("o lider e : " + leader);
-                   sendingSocket("voto," + leader);
+                   sendingSocket("voto");
                    break;
-               }
-           }
+                }
+            }
         }
     }
 
-    private void sendingSocket(String mensage)  {
-        String msgPlusUrl = mensage + "," + urlPlace;
-        Thread t1 = (new Thread(() -> {
-            while (true) {
-                String[] array = mensage.split(",");
-                if (!array[0].equals("voto")) ts += 5000;
-                DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
-                try {
-                    s.send(hi);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                System.out.println("Mensagem enviado: " + msgPlusUrl);
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }));
-        t1.start();
+    private void sendingSocket(String msg) throws IOException {
+        String msgPlusUrl = "";
+        switch (msg){
+            case "ola":
+                msgPlusUrl = msg + "," + urlPlace;
+                ts += 5000;
+                break;
+            case "voto":
+                msgPlusUrl = msg + "," + urlPlace + "," + leader;
+                break;
+        }
+        DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
+        DatagramSocket dS = new DatagramSocket();
+        dS.send(hi);
+        System.out.println("Mensagem enviado: " + msgPlusUrl);
     }
 
-
-    private void receivingSocket()
-    {
-        DatagramPacket recv = new DatagramPacket(buf, buf.length);
-        Thread t1 = (new Thread(() -> {
-            while (true) {
-                try {
-                    s.receive(recv);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                String msg = new String(buf);
-                String[] hash = msg.split(",",2);
+    private void receivingSocket() throws IOException {
+            while (exit) {
+                byte[] buf = new byte[1024];
+                DatagramPacket recv = new DatagramPacket(buf, buf.length);
+                s.receive(recv);
+                String msg = new String(recv.getData());
+                String[] hash = msg.split(",");
+                /*switch (hash[0]){
+                    case "voto":
+                        modifyHash(hash[1]);
+                        majorityVote();
+                        if(!placeManagerList.contains(hash[2])) placeManagerList.add(hash[2]);
+                        break;
+                }*/
                 if(hash[0].equals("voto"))
                 {
-                    //modifyHash(hash[1]);
-                    //majorityVote();
+                    modifyHash(hash[2]);
+                    majorityVote();
                 }
-                else if(!placeManagerList.contains(hash[1]))
-                {
-                    placeManagerList.add(hash[1]);
-                }
+                if(!placeManagerList.contains(hash[1])) placeManagerList.add(hash[1]);
                 placeHashTimer.put(ts,placeManagerList);
                 System.out.println("Mensagem recebida: " + msg);
                 System.out.println("Pelo PlaceManager: " + urlPlace);
                 compareHashMap();
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-               /* if(hash[0].equals("null"))
-                {
-                    break;
-                }
             }
-            s.leaveGroup(addr);
-            s.close();*/
-            }
-        }));
-        t1.start();
+        s.leaveGroup(addr);
+        s.close();
     }
 
 
