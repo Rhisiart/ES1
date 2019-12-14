@@ -45,6 +45,17 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             }
         }));
         t2.start();
+        Thread t3= (new Thread(() -> {
+                if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
+                    try {
+                        Thread.sleep(15*1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    exit=false;
+                }
+        }));
+        t3.start();
 
     }
 
@@ -111,7 +122,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            majorityVote();
             sendingSocket("Alive");
+
         }
     }
 
@@ -145,7 +158,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 timeVote = -1;
                 //majorityVote();
             }else {
-                majorityVote();
                 time += 1;
                 timeVote = time;
                 if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
