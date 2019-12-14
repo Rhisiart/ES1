@@ -21,14 +21,14 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private String majorLeader = "";
     private boolean exit = true;
     private int time = 0;
-    private int timeVote = -1;
+    private int timeVote = 0;
+    private boolean consenso = true;
 
     PlacesManager(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
         addr = InetAddress.getByName("224.0.0.3");
         s = new MulticastSocket(port);
         s.joinGroup(addr);
-        timeWithViewPlaceManager.put(0,new ArrayList<>());
         Thread t1 = (new Thread(() -> {
             try {
                 receivingSocket();
@@ -46,12 +46,13 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }));
         t2.start();
         Thread t3= (new Thread(() -> {
-                if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
+                if(urlPlace.equals("rmi://localhost:" + 2029 + "/placelist")) {
                     try {
-                        Thread.sleep(15*1000);
+                        Thread.sleep(30*1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                    System.out.println("Aquiiiii");
                     exit=false;
                 }
         }));
@@ -82,9 +83,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     majorLeader = me.getKey();
                     System.out.println("o lider por unanimidade e " + me.getKey() + " para " + urlPlace);
                     //sendingSocket("lider");
-                }
+                }else consenso =false;
             }
-        }
+        } else consenso = false;
     }
 
     private void modifyHash(String vote)
@@ -93,7 +94,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         if(!voteHash.containsKey(vote)) voteHash.put(vote,1);
         else
             voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
-        for(Map.Entry<String,Integer> me : voteHash.entrySet()) System.out.println( "Em " + me.getKey() + " voto "+ me.getValue() + " " + urlPlace);
+        //for(Map.Entry<String,Integer> me : voteHash.entrySet()) System.out.println( "Em " + me.getKey() + " voto "+ me.getValue() + " " + urlPlace);
     }
 
     private void compareHashMap() throws IOException {
@@ -101,10 +102,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         {
             for (String a : timeWithViewPlaceManager.get(time))
             {
-                if (!(timeWithViewPlaceManager.get(time-1).contains(a)) || timeWithViewPlaceManager.get(time).size() < timeWithViewPlaceManager.get(time-1).size())
+                if (!(timeWithViewPlaceManager.get(time - 1).contains(a)) || timeWithViewPlaceManager.get(time).size() < timeWithViewPlaceManager.get(time - 1).size() || !consenso)
                 {
                     chooseLeader();
-                    //modifyHash(leader);
                     //System.out.println("O voto para lider e " + leader + " pelo " + urlPlace + " " + time);
                     sendingSocket("voto");
                     break;
@@ -117,14 +117,28 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
 
     private void msgPeriodic() throws IOException {
         while (exit) {
+            Thread t1 = (new Thread(() -> {
+                try {
+                    sendingSocket("Alive");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }));
+            t1.start();
+            ArrayList<String> clone = new ArrayList<>(placeManagerView);
+            timeWithViewPlaceManager.put(time, clone);
+            compareHashMap();
+            majorityVote();
+            /*for (Map.Entry<Integer,ArrayList<String>> me : timeWithViewPlaceManager.entrySet()) {
+                if (me.getKey() == time) System.out.println("hash = " + me + " " + urlPlace);}*/
+            time += 1;
+            timeVote = time;
+            placeManagerView.clear();
             try {
                 Thread.sleep(5*1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            majorityVote();
-            sendingSocket("Alive");
-
         }
     }
 
@@ -156,18 +170,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             {
                 modifyHash(hash[2]);
                 timeVote = -1;
-                //majorityVote();
-            }else {
-                time += 1;
-                timeVote = time;
+            }else
                 if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
-                ArrayList<String> clone = new ArrayList<>(placeManagerView);
-                timeWithViewPlaceManager.put(time, clone);
-                compareHashMap();
-            }
-            /*for (Map.Entry<Integer,ArrayList<String>> me : timeWithViewPlaceManager.entrySet()) {
-                if (me.getKey() == time) System.out.println("hash = " + me + " " + urlPlace);
-            }*/
+
             //System.out.println("Mensagem recebida: " + msg);
             //System.out.println("Pelo PlaceManager: " + urlPlace);
         }
