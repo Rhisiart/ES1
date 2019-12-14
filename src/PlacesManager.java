@@ -80,6 +80,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
                 if (!me.getValue().equals(1)) {
+                    consenso = true;
                     majorLeader = me.getKey();
                     System.out.println("o lider por unanimidade e " + me.getKey() + " para " + urlPlace);
                     //sendingSocket("lider");
