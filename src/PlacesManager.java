@@ -57,7 +57,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 }
         }));
         t3.start();
-
+        
     }
 
     private void chooseLeader()  {
