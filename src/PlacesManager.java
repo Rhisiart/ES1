@@ -103,6 +103,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             {
                 if (!(timeWithViewPlaceManager.get(time - 1).contains(a)) || timeWithViewPlaceManager.get(time).size() < timeWithViewPlaceManager.get(time - 1).size() || !consenso)
                 {
+                    consenso = false;
                     chooseLeader();
                     //System.out.println("O voto para lider e " + leader + " pelo " + urlPlace + " " + time);
                     sendingSocket("voto");
