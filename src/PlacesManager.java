@@ -22,7 +22,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private boolean exit = true;
     private int time = 0;
     private int timeVote = 0;
-    private boolean consenso = true;
+    private boolean consenso = false;
 
     PlacesManager(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
@@ -79,12 +79,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
-                if (!me.getValue().equals(1)) {
                     consenso = true;
                     majorLeader = me.getKey();
                     System.out.println("o lider por unanimidade e " + me.getKey() + " para " + urlPlace);
                     //sendingSocket("lider");
-                }else consenso =false;
             }
         } else consenso = false;
     }
@@ -129,7 +127,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             ArrayList<String> clone = new ArrayList<>(placeManagerView);
             timeWithViewPlaceManager.put(time, clone);
             compareHashMap();
-            majorityVote();
+            if(!consenso) majorityVote();
             /*for (Map.Entry<Integer,ArrayList<String>> me : timeWithViewPlaceManager.entrySet()) {
                 if (me.getKey() == time) System.out.println("hash = " + me + " " + urlPlace);}*/
             time += 1;
