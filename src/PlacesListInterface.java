@@ -6,7 +6,7 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 
 public interface PlacesListInterface extends Remote {
-    void addPlace(Place p) throws RemoteException, MalformedURLException, NotBoundException;
+    void addPlace(Place p) throws IOException, NotBoundException;
     ArrayList<Place> allPlaces() throws RemoteException;
     Place getPlace(String codigoPostal) throws RemoteException;
 }

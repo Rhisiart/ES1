@@ -1,49 +1,35 @@
 import java.io.IOException;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PlacesManager extends UnicastRemoteObject implements PlacesListInterface {
-    private static final long serialVersionUID = 1L;
-    private ArrayList<String> frontEndFollowers;
-    private String frontEndLeader;
+public class PlacesManagerCopy extends UnicastRemoteObject implements PlacesListInterface {
     private ArrayList<Place> placeArrayList = new ArrayList<>();
     private ArrayList<String> placeManagerView = new ArrayList<>();
     private HashMap<Integer,ArrayList<String>> timeWithViewPlaceManager = new HashMap<>();
     private HashMap<String,Integer> voteHash = new HashMap<>();
     private InetAddress addr;
     private static int port = 8888;
+    private MulticastSocket s;
     private String urlPlace;
     private String leader = " ";
     private String majorLeader = "";
     private boolean exit = true;
     private int time = 0;
     private int timeVote = 0;
-    private boolean consenso = true;
+    private boolean consenso = false;
 
-   public PlacesManager() throws RemoteException {
-        super();
-        this.frontEndFollowers = new ArrayList<>();
-        this.frontEndLeader = "";
-        Thread t1 = (new Thread(() -> {
-           try {
-               Thread.sleep(10*1000);
-               receivingSocket();
-           } catch (IOException | InterruptedException e) {
-               e.printStackTrace();
-           }
-        }));
-        t1.start();
-    }
-
-    PlacesManager(int port2) throws IOException {
+    PlacesManagerCopy(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
+        addr = InetAddress.getByName("224.0.0.3");
+        s = new MulticastSocket(port);
+        s.joinGroup(addr);
         Thread t1 = (new Thread(() -> {
             try {
                 receivingSocket();
@@ -61,15 +47,15 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }));
         t2.start();
         Thread t3= (new Thread(() -> {
-                if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
-                    try {
-                        Thread.sleep(30*1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("Dead placeManager");
-                    exit=false;
+            if(urlPlace.equals("rmi://localhost:" + 2029 + "/placelist")) {
+                try {
+                    Thread.sleep(30*1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+                System.out.println("Dead placeManager");
+                exit=false;
+            }
         }));
         t3.start();
     }
@@ -92,13 +78,12 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
-                    consenso = true;
-                    majorLeader = me.getKey();
-                    //System.out.println("o lider por unanimidade e " + me.getKey() + " para " + urlPlace);
-                    //sendingSocket("lider");
+                consenso = true;
+                majorLeader = me.getKey();
+                //System.out.println("o lider por unanimidade e " + me.getKey() + " para " + urlPlace);
+                //sendingSocket("lider");
             }
-        } else
-            consenso = false;
+        } else consenso = false;
     }
 
     private void modifyHash(String vote)
@@ -117,7 +102,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             {
                 if (!(timeWithViewPlaceManager.get(time - 1).contains(a)) || timeWithViewPlaceManager.get(time).size() < timeWithViewPlaceManager.get(time - 1).size() || !consenso)
                 {
-                    majorLeader = "";
                     consenso = false;
                     chooseLeader();
                     //System.out.println("O voto para lider e " + leader + " pelo " + urlPlace + " " + time);
@@ -171,13 +155,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
         DatagramSocket dS = new DatagramSocket();
         dS.send(hi);
-        System.out.println("Mensagem enviada: " + msgPlusUrl);
+        System.out.println("Mensagem enviado: " + msgPlusUrl);
     }
 
     private void receivingSocket() throws IOException{
-        addr = InetAddress.getByName("224.0.0.3");
-        MulticastSocket s = new MulticastSocket(port);
-        s.joinGroup(addr);
         while (exit) {
             byte[] buf = new byte[1024];
             DatagramPacket recv = new DatagramPacket(buf, buf.length);
@@ -188,13 +169,8 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             {
                 modifyHash(hash[2]);
                 timeVote = -1;
-            }else{
-                //if(!hash[2].equals("")) frontEndLeader = hash[2];
-                //if (!hash[1].equals(frontEndLeader)) frontEndFollowers.add(hash[1]);
-                if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
-            }
-            //System.out.println("FrontLeader " + frontEndLeader);
-            //for (String a : frontEndFollowers) System.out.println("Followers " + a);
+            }else
+            if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
 
             //System.out.println("Mensagem recebida: " + msg);
             //System.out.println("Pelo PlaceManager: " + urlPlace);
@@ -206,11 +182,8 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
 
 
     @Override
-    public void addPlace(Place p) throws IOException {
-       placeArrayList.add(p);
-       if(frontEndLeader.equals(urlPlace)){
-           sendingSocket("addPlace," + p.getPostalCode() + "," + p.getLocality());
-       }
+    public void addPlace(Place p)  {
+        placeArrayList.add(p);
     }
 
     @Override
