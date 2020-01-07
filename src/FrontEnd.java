@@ -12,13 +12,12 @@ import java.util.Random;
 
 public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface {
     private static final long serialVersionUID = 1L;
-    private boolean exit = true;
     private int timeOut = 0;
     private String leader = "";
     private ArrayList<String> followersArray = new ArrayList<>();
+    private boolean exit = true;
 
-    FrontEnd(int port2) throws IOException {
-        String urlPlace = "rmi://localhost:" + port2 + "/frontend";
+    FrontEnd() throws IOException {
         Thread t1 = (new Thread(() -> {
             try {
                 receivingSocket();

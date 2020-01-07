@@ -25,7 +25,7 @@ public class RMIServer {
             }
         if(Integer.parseInt(args[0]) == 2031) {
             try {
-                FrontEnd frontEnd = new FrontEnd(Integer.parseInt(args[0]));
+                FrontEnd frontEnd = new FrontEnd();
                 assert r != null;
                 r.rebind("frontend", frontEnd);
                 System.out.println("FrontEnd ready");
