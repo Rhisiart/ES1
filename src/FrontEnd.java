@@ -55,8 +55,7 @@ public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface
 
     @Override
     public void addPlace(Place p) throws IOException, NotBoundException {
-        System.out.println("Aquiiii");
-        PlacesListInterface pmLeader = (PlacesListInterface) Naming.lookup("rmi://localhost:" + leader + "/placelist");
+        PlacesListInterface pmLeader = (PlacesListInterface) Naming.lookup(leader);
         pmLeader.addPlace(p);
     }
 

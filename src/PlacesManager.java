@@ -17,11 +17,12 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private HashMap<String,Integer> voteHash = new HashMap<>();
     private InetAddress addr;
     private static int port = 8888;
-    private String urlPlace = "";
+    private String urlPlace;
     private String leader = "";
     private String majorLeader = "";
+    private String urlPlaceManager = "";
     private boolean exit = true;
-    private int time = 0,timeVote = 0, orderLog = 0;
+    private int time = 0,timeVote = 0, orderLog = 0, key = 0;
     private boolean consenso = true;
 
     PlacesManager(int port2) throws IOException {
@@ -137,7 +138,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
     }
 
-    /**se uma mensagem atrasada for enviado por um placeManage que crashou, nao e considerada**/
+
     private void sendingSocket(String msg) throws IOException {
         String msgPlusUrl = "";
         switch (msg) {
@@ -148,8 +149,15 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 msgPlusUrl = msg + "," + urlPlace + "," + leader + ",";
                 break;
             case "addPlace":
-                msgPlusUrl = msg + "," + registryLog.get(orderLog);
-                System.out.println("aquiiiiiiiiiiiiiiii " + registryLog.get(orderLog));
+                String codLoc = registryLog.get(orderLog).getPostalCode() + "," + registryLog.get(orderLog).getLocality();
+                msgPlusUrl = msg + "," + orderLog + "," + codLoc;
+                break;
+            case "getPlace":
+                msgPlusUrl = msg + "," + key + "," + urlPlace;
+                break;
+            case "addForgetPlace":
+                codLoc = registryLog.get(key).getPostalCode() + "," + registryLog.get(key).getLocality();
+                msgPlusUrl = msg + "," + codLoc + "," + key + "," + urlPlaceManager;
                 break;
         }
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
@@ -158,6 +166,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         System.out.println("Mensagem enviada: " + msgPlusUrl);
     }
 
+    /**se uma mensagem atrasada for enviado por um placeManage que crashou, nao e considerada**/
     private void receivingSocket() throws IOException{
         addr = InetAddress.getByName("224.0.0.3");
         MulticastSocket s = new MulticastSocket(port);
@@ -174,11 +183,31 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     timeVote = -1;
                     break;
                 case "addPlace":
-                    Place place = new Place(hash[1],hash[2]);
-                    if(!urlPlace.equals(majorLeader)) placeArrayList.add(place);
+                    if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")){
+
+                    }
+                    else {
+                        key = Integer.parseInt(hash[1]) - 1;
+                        registryLog.put(Integer.parseInt(hash[1]), new Place(hash[2], hash[3]));
+                        if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[2], hash[3]));
+                        if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
+                    }
                     break;
                 case "Alive":
                     if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
+                    break;
+                case "getPlace":
+                    if (urlPlace.equals(majorLeader)) {
+                        key = Integer.parseInt(hash[1]);
+                        urlPlaceManager = hash[2];
+                        sendingSocket("addForgetPlace");
+                    }
+                    break;
+                case "addForgetPlace":
+                    if (urlPlace.equals(hash[4])) {
+                        registryLog.put(Integer.parseInt(hash[3]),new Place(hash[1],hash[2]));
+                        placeArrayList.add(new Place(hash[1],hash[2]));
+                    }
                     break;
             }
             //System.out.println("Mensagem recebida: " + msg);
@@ -192,10 +221,13 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
 
     @Override
     public void addPlace(Place p) throws IOException {
-        orderLog++;
-        placeArrayList.add(p);
-        registryLog.put(orderLog,p);
-        sendingSocket("addPlace");
+        if (!placeArrayList.contains(p)){
+            System.out.println("O place com o codigo postal " + p.getPostalCode());
+            orderLog++;
+            placeArrayList.add(p);
+            registryLog.put(orderLog,p);
+            sendingSocket("addPlace");
+        }
     }
 
     @Override
