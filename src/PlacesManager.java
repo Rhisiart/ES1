@@ -1,3 +1,5 @@
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -149,15 +151,14 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 msgPlusUrl = msg + "," + urlPlace + "," + leader + ",";
                 break;
             case "addPlace":
-                String codLoc = registryLog.get(orderLog).getPostalCode() + "," + registryLog.get(orderLog).getLocality();
-                msgPlusUrl = msg + "," + orderLog + "," + codLoc;
+                msgPlusUrl = msg + "," + orderLog + "," + registryLog.get(orderLog).getPostalCode() + "," + registryLog.get(orderLog).getLocality();
                 break;
             case "getPlace":
-                msgPlusUrl = msg + "," + key + "," + urlPlace;
+                msgPlusUrl = msg + "," + key + "," + urlPlace + ",";
                 break;
-            case "addForgetPlace":
-                codLoc = registryLog.get(key).getPostalCode() + "," + registryLog.get(key).getLocality();
-                msgPlusUrl = msg + "," + codLoc + "," + key + "," + urlPlaceManager;
+            case "addLostPlace":
+                msgPlusUrl = msg + "," + key + "," + urlPlaceManager + "," + registryLog.get(key).getPostalCode() + "," + registryLog.get(key).getLocality();
+                System.out.println(msgPlusUrl);
                 break;
         }
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
@@ -183,15 +184,16 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     timeVote = -1;
                     break;
                 case "addPlace":
-                    if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")){
+                    /**simulacao de uma mensagem que nao chegou**/
+                   /*if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")){
 
                     }
-                    else {
+                    else {*/
                         key = Integer.parseInt(hash[1]) - 1;
                         registryLog.put(Integer.parseInt(hash[1]), new Place(hash[2], hash[3]));
                         if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[2], hash[3]));
                         if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
-                    }
+                    //}
                     break;
                 case "Alive":
                     if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
@@ -200,13 +202,14 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     if (urlPlace.equals(majorLeader)) {
                         key = Integer.parseInt(hash[1]);
                         urlPlaceManager = hash[2];
-                        sendingSocket("addForgetPlace");
+                        sendingSocket("addLostPlace");
                     }
                     break;
-                case "addForgetPlace":
-                    if (urlPlace.equals(hash[4])) {
-                        registryLog.put(Integer.parseInt(hash[3]),new Place(hash[1],hash[2]));
-                        placeArrayList.add(new Place(hash[1],hash[2]));
+                case "addLostPlace":
+                    if (urlPlace.equals(hash[2])) {
+                        registryLog.put(Integer.parseInt(hash[1]),new Place(hash[3],hash[4]));
+                        placeArrayList.add(new Place(hash[3],hash[4]));
+                        for (Place a : placeArrayList){System.out.println(a.getLocality());}
                     }
                     break;
             }
