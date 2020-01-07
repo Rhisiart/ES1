@@ -8,5 +8,5 @@ import java.util.ArrayList;
 public interface PlacesListInterface extends Remote {
     void addPlace(Place p) throws IOException, NotBoundException;
     ArrayList<Place> allPlaces() throws RemoteException;
-    Place getPlace(String codigoPostal) throws RemoteException;
+    Place getPlace(String codigoPostal) throws RemoteException, NotBoundException, MalformedURLException;
 }

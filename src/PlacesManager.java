@@ -79,8 +79,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
                     consenso = true;
                     majorLeader = me.getKey();
-                    //System.out.println("o lider por unanimidade e " + me.getKey() + " para " + urlPlace);
-                    //sendingSocket("lider");
             }
         } else
             consenso = false;
@@ -92,7 +90,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         if(!voteHash.containsKey(vote)) voteHash.put(vote,1);
         else
             voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
-        //for(Map.Entry<String,Integer> me : voteHash.entrySet()) System.out.println( "Em " + me.getKey() + " voto "+ me.getValue() + " " + urlPlace);
     }
 
     private void compareHashMap() throws IOException {
@@ -105,7 +102,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     majorLeader = "";
                     consenso = false;
                     chooseLeader();
-                    //System.out.println("O voto para lider e " + leader + " pelo " + urlPlace + " " + time);
                     sendingSocket("voto");
                     break;
                 }
@@ -127,8 +123,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             timeWithViewPlaceManager.put(time, clone);
             compareHashMap();
             if(!consenso) majorityVote();
-            /*for (Map.Entry<Integer,ArrayList<String>> me : timeWithViewPlaceManager.entrySet()) {
-                if (me.getKey() == time) System.out.println("hash = " + me + " " + urlPlace);}*/
             time += 1;
             timeVote = time;
             placeManagerView.clear();

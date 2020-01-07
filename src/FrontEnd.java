@@ -1,11 +1,14 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.MulticastSocket;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface {
     private static final long serialVersionUID = 1L;
@@ -66,12 +69,9 @@ public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface
     }
 
     @Override
-    public Place getPlace(String codigoPostal)  {
-        /*for (Place p : placeArrayList) {
-            if (p.getPostalCode().equals(codigoPostal)) {
-                return p;
-            }
-        }*/
-        return null;
+    public Place getPlace(String codigoPostal) throws RemoteException, NotBoundException, MalformedURLException {
+        Random generator = new Random();
+        PlacesListInterface pmFollower = (PlacesListInterface) Naming.lookup(followersArray.get(generator.nextInt(followersArray.size())));
+        return pmFollower.getPlace(codigoPostal);
     }
 }
