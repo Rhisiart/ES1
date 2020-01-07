@@ -3,6 +3,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,10 +45,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             }
         }));
         t2.start();
-       /* Thread t3= (new Thread(() -> {
+       Thread t3= (new Thread(() -> {
                 if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
                     try {
-                        Thread.sleep(30*1000);
+                        Thread.sleep(60*1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -54,7 +56,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     exit=false;
                 }
         }));
-        t3.start();*/
+        t3.start();
     }
 
     private void chooseLeader()  {
@@ -71,7 +73,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         leader = biggestHash;
     }
 
-    private void majorityVote() {
+    private void majorityVote() throws IOException {
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
@@ -133,7 +135,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     }
 
 
-    private void sendingSocket(String msg) throws IOException {
+    private void sendingSocket(String msg) throws IOException{
         String msgPlusUrl = "";
         switch (msg) {
             case "Alive":
@@ -150,7 +152,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 break;
             case "addLostPlace":
                 msgPlusUrl = msg + "," + key + "," + urlPlaceManager + "," + registryLog.get(key).getPostalCode() + "," + registryLog.get(key).getLocality();
-                System.out.println(msgPlusUrl);
                 break;
         }
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
@@ -181,6 +182,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
 
                     }
                     else {*/
+                        orderLog = Integer.parseInt(hash[1]);
                         key = Integer.parseInt(hash[1]) - 1;
                         registryLog.put(Integer.parseInt(hash[1]), new Place(hash[2], hash[3]));
                         if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[2], hash[3]));
@@ -217,10 +219,16 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     @Override
     public void addPlace(Place p) throws IOException {
         if (!placeArrayList.contains(p)){
-            System.out.println("O place com o codigo postal " + p.getPostalCode());
+            System.out.println("O place com o codigo postal " + p.getPostalCode() + " foi adicionado");
             orderLog++;
             placeArrayList.add(p);
             registryLog.put(orderLog,p);
+            /*if (urlPlace.equals("rmi://localhost:2029/placelist")){
+            for (Map.Entry<Integer,Place> me : registryLog.entrySet()){
+                System.out.println(me.getValue().getLocality());
+                System.out.println(me.getKey());
+                }
+            }*/
             sendingSocket("addPlace");
         }
     }
