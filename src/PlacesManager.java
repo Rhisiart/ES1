@@ -1,8 +1,8 @@
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
+import java.net.*;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,15 +71,23 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         leader = biggestHash;
     }
 
-    private void majorityVote() {
+    private void majorityVote() throws RemoteException, NotBoundException, MalformedURLException {
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
                     consenso = true;
                     majorLeader = me.getKey();
+                    /*if (urlPlace.equals(majorLeader)){
+                        for (String a : placeManagerView) {
+                            PlacesListInterface pl = (PlacesListInterface) Naming.lookup(a);
+                            ArrayList<Place> place = pl.allPlaces();
+                            if(!placeArrayList.equals(place)){
+                                System.out.println("Aquiii");
+                            }
+                        }
+                    }*/
             }
-        } else
-            consenso = false;
+        }
     }
 
     private void setVote(String vote)
@@ -107,7 +115,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
     }
 
-    private void heartBeats() throws IOException {
+    private void heartBeats() throws IOException, NotBoundException {
         while (exit) {
             Thread t1 = (new Thread(() -> {
                 try {
@@ -169,7 +177,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             s.receive(recv);
             String msg = new String(recv.getData());
             String[] hash = msg.split(",");
-            if (placeManagerView.contains(hash[1])){
+            if (placeManagerView.contains(hash[1]) && !hash[0].equals("Alive")) {
                 switch (hash[0]) {
                     case "voto":
                         setVote(hash[2]);
@@ -177,19 +185,15 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                         break;
                     case "addPlace":
                         /**simulacao de uma mensagem que nao chegou**/
-                       /*if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")){
+                        if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")) {
 
+                        } else {
+                            orderLog = Integer.parseInt(hash[2]);
+                            key = Integer.parseInt(hash[2]) - 1;
+                            registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
+                            if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
+                            if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
                         }
-                        else {*/
-                        orderLog = Integer.parseInt(hash[2]);
-                        key = Integer.parseInt(hash[2]) - 1;
-                        registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
-                        if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
-                        if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
-                        //}
-                        break;
-                    case "Alive":
-                        if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
                         break;
                     case "getPlace":
                         if (urlPlace.equals(majorLeader)) {
@@ -206,6 +210,8 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                         break;
                 }
             }
+            if(!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
+
             //System.out.println("Mensagem recebida: " + msg);
             //System.out.println("Pelo PlaceManager: " + urlPlace);
         }
