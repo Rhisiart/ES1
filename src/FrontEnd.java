@@ -52,7 +52,7 @@ public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface
         s.leaveGroup(addr);
         s.close();
     }
-    
+
     @Override
     public void addPlace(Place p) throws IOException, NotBoundException {
         PlacesListInterface pmLeader = (PlacesListInterface) Naming.lookup(leader);

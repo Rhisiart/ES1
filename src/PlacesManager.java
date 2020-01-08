@@ -166,7 +166,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         System.out.println("Mensagem enviada: " + msgPlusUrl);
     }
 
-    /**se uma mensagem atrasada for enviado por um placeManage que crashou, nao e considerada**/
     private void receivingSocket() throws IOException{
         addr = InetAddress.getByName("224.0.0.3");
         MulticastSocket s = new MulticastSocket(port);
@@ -185,15 +184,15 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                         break;
                     case "addPlace":
                         /**simulacao de uma mensagem que nao chegou**/
-                        if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")) {
+                       /* if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")) {
 
-                        } else {
+                        } else {*/
                             orderLog = Integer.parseInt(hash[2]);
                             key = Integer.parseInt(hash[2]) - 1;
                             registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
                             if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
                             if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
-                        }
+                        //}
                         break;
                     case "getPlace":
                         if (urlPlace.equals(majorLeader)) {
