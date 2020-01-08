@@ -7,17 +7,19 @@ import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Random;
 
 public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface {
     private static final long serialVersionUID = 1L;
-    private int timeOut = 0;
     private String leader = "";
     private ArrayList<String> followersArray = new ArrayList<>();
     private boolean exit = true;
+    private long timeStamp;
 
     FrontEnd() throws IOException {
+        timeStamp = new Timestamp(System.currentTimeMillis()).getTime();
         Thread t1 = (new Thread(() -> {
             try {
                 receivingSocket();
@@ -27,7 +29,7 @@ public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface
         }));
         t1.start();
     }
-    /**melhorar a forma de verificar/atualizar a lista**/
+
     private void receivingSocket() throws IOException{
         InetAddress addr = InetAddress.getByName("224.0.0.3");
         MulticastSocket s = new MulticastSocket(8888);
@@ -38,23 +40,19 @@ public class FrontEnd extends UnicastRemoteObject implements PlacesListInterface
             s.receive(recv);
             String msg = new String(recv.getData());
             String[] hash = msg.split(",");
-            if(timeOut%3 == 0) followersArray.clear();
-            switch (hash[0]){
-                case "Alive":
-                    timeOut++;
-                    if (!followersArray.contains(hash[1])) followersArray.add(hash[1]);
-                    if (!hash[1].equals("") || !leader.equals(hash[1])) leader = hash[1];
-                    break;
-                case "voto":
-                    break;
+            if(new Timestamp(System.currentTimeMillis()).getTime() - timeStamp > 15000){
+                followersArray.clear();
+                timeStamp = new Timestamp(System.currentTimeMillis()).getTime();
+            }
+            if(hash[0].equals("Alive")) {
+                if (!followersArray.contains(hash[1])) followersArray.add(hash[1]);
+                if (!hash[2].equals("") && !leader.equals(hash[2])) leader = hash[2];
             }
         }
         s.leaveGroup(addr);
         s.close();
     }
-
-
-
+    
     @Override
     public void addPlace(Place p) throws IOException, NotBoundException {
         PlacesListInterface pmLeader = (PlacesListInterface) Naming.lookup(leader);
