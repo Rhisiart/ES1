@@ -3,8 +3,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -73,7 +71,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         leader = biggestHash;
     }
 
-    private void majorityVote() throws IOException {
+    private void majorityVote() {
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
@@ -145,13 +143,13 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 msgPlusUrl = msg + "," + urlPlace + "," + leader + ",";
                 break;
             case "addPlace":
-                msgPlusUrl = msg + "," + orderLog + "," + registryLog.get(orderLog).getPostalCode() + "," + registryLog.get(orderLog).getLocality();
+                msgPlusUrl = msg + "," +  urlPlace + ","  + orderLog + "," + registryLog.get(orderLog).getPostalCode() + "," + registryLog.get(orderLog).getLocality();
                 break;
             case "getPlace":
-                msgPlusUrl = msg + "," + key + "," + urlPlace + ",";
+                msgPlusUrl = msg + "," + urlPlace + "," + key + ",";
                 break;
             case "addLostPlace":
-                msgPlusUrl = msg + "," + key + "," + urlPlaceManager + "," + registryLog.get(key).getPostalCode() + "," + registryLog.get(key).getLocality();
+                msgPlusUrl = msg + "," + urlPlace + "," + key + "," + urlPlaceManager + "," + registryLog.get(key).getPostalCode() + "," + registryLog.get(key).getLocality();
                 break;
         }
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
@@ -171,41 +169,42 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             s.receive(recv);
             String msg = new String(recv.getData());
             String[] hash = msg.split(",");
-            switch (hash[0]) {
-                case "voto":
-                    setVote(hash[2]);
-                    timeVote = -1;
-                    break;
-                case "addPlace":
-                    /**simulacao de uma mensagem que nao chegou**/
-                   /*if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")){
+            if (placeManagerView.contains(hash[1])){
+                switch (hash[0]) {
+                    case "voto":
+                        setVote(hash[2]);
+                        timeVote = -1;
+                        break;
+                    case "addPlace":
+                        /**simulacao de uma mensagem que nao chegou**/
+                       /*if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")){
 
-                    }
-                    else {*/
-                        orderLog = Integer.parseInt(hash[1]);
-                        key = Integer.parseInt(hash[1]) - 1;
-                        registryLog.put(Integer.parseInt(hash[1]), new Place(hash[2], hash[3]));
-                        if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[2], hash[3]));
+                        }
+                        else {*/
+                        orderLog = Integer.parseInt(hash[2]);
+                        key = Integer.parseInt(hash[2]) - 1;
+                        registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
+                        if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
                         if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
-                    //}
-                    break;
-                case "Alive":
-                    if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
-                    break;
-                case "getPlace":
-                    if (urlPlace.equals(majorLeader)) {
-                        key = Integer.parseInt(hash[1]);
-                        urlPlaceManager = hash[2];
-                        sendingSocket("addLostPlace");
-                    }
-                    break;
-                case "addLostPlace":
-                    if (urlPlace.equals(hash[2])) {
-                        registryLog.put(Integer.parseInt(hash[1]),new Place(hash[3],hash[4]));
-                        placeArrayList.add(new Place(hash[3],hash[4]));
-                        for (Place a : placeArrayList){System.out.println(a.getLocality());}
-                    }
-                    break;
+                        //}
+                        break;
+                    case "Alive":
+                        if (!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
+                        break;
+                    case "getPlace":
+                        if (urlPlace.equals(majorLeader)) {
+                            key = Integer.parseInt(hash[2]);
+                            urlPlaceManager = hash[1];
+                            sendingSocket("addLostPlace");
+                        }
+                        break;
+                    case "addLostPlace":
+                        if (urlPlace.equals(hash[3])) {
+                            registryLog.put(Integer.parseInt(hash[2]), new Place(hash[4], hash[5]));
+                            placeArrayList.add(new Place(hash[4], hash[5]));
+                        }
+                        break;
+                }
             }
             //System.out.println("Mensagem recebida: " + msg);
             //System.out.println("Pelo PlaceManager: " + urlPlace);
