@@ -71,7 +71,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         leader = biggestHash;
     }
 
-    private void majorityVote() throws RemoteException, NotBoundException, MalformedURLException {
+    private void majorityVote()  {
         if (!(voteHash.size() > 1))
         {
             for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
@@ -115,7 +115,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
     }
 
-    private void heartBeats() throws IOException, NotBoundException {
+    private void heartBeats() throws IOException{
         while (exit) {
             Thread t1 = (new Thread(() -> {
                 try {
@@ -165,7 +165,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         dS.send(hi);
         System.out.println("Mensagem enviada: " + msgPlusUrl);
     }
-
+    /**simulacao de uma mensagem que nao chegou**/
     private void receivingSocket() throws IOException{
         addr = InetAddress.getByName("224.0.0.3");
         MulticastSocket s = new MulticastSocket(port);
@@ -183,7 +183,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                         timeVote = -1;
                         break;
                     case "addPlace":
-                        /**simulacao de uma mensagem que nao chegou**/
                        /* if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")) {
 
                         } else {*/
@@ -227,12 +226,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             orderLog++;
             placeArrayList.add(p);
             registryLog.put(orderLog,p);
-            /*if (urlPlace.equals("rmi://localhost:2029/placelist")){
-            for (Map.Entry<Integer,Place> me : registryLog.entrySet()){
-                System.out.println(me.getValue().getLocality());
-                System.out.println(me.getKey());
-                }
-            }*/
             sendingSocket("addPlace");
         }
     }
