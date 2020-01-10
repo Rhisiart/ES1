@@ -71,21 +71,11 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         leader = biggestHash;
     }
 
-    private void majorityVote()  {
-        if (!(voteHash.size() > 1))
-        {
-            for (Map.Entry<String,Integer> me : voteHash.entrySet()) {
+    private void majorityVote() {
+        if (voteHash.size() == 1) {
+            for (Map.Entry<String, Integer> me : voteHash.entrySet()) {
                     consenso = true;
                     majorLeader = me.getKey();
-                    /*if (urlPlace.equals(majorLeader)){
-                        for (String a : placeManagerView) {
-                            PlacesListInterface pl = (PlacesListInterface) Naming.lookup(a);
-                            ArrayList<Place> place = pl.allPlaces();
-                            if(!placeArrayList.equals(place)){
-                                System.out.println("Aquiii");
-                            }
-                        }
-                    }*/
             }
         }
     }
@@ -165,6 +155,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         dS.send(hi);
         System.out.println("Mensagem enviada: " + msgPlusUrl);
     }
+
     /**simulacao de uma mensagem que nao chegou**/
     private void receivingSocket() throws IOException{
         addr = InetAddress.getByName("224.0.0.3");
