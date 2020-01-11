@@ -43,16 +43,16 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             }
         }));
         t2.start();
-       Thread t3= (new Thread(() -> {
-                if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
-                    try {
-                        Thread.sleep(60*1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("Dead placeManager");
-                    exit=false;
+        Thread t3= (new Thread(() -> {
+            if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
+                try {
+                    Thread.sleep(60*1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+                System.out.println("Dead placeManager");
+                exit=false;
+            }
         }));
         t3.start();
     }
@@ -70,22 +70,23 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
         leader = biggestHash;
     }
-
+   
     private void majorityVote() {
         if (voteHash.size() == 1) {
             for (Map.Entry<String, Integer> me : voteHash.entrySet()) {
+                if (me.getValue() == placeManagerView.size()) {
                     consenso = true;
                     majorLeader = me.getKey();
+                }
             }
         }
     }
 
     private void setVote(String vote)
     {
-        if(timeVote == time) voteHash.clear();
-        if(!voteHash.containsKey(vote)) voteHash.put(vote,1);
-        else
-            voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
+        if(voteHash.isEmpty()) voteHash.put(vote,1);
+        else if(voteHash.containsKey(vote)) voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
+        else voteHash.clear();
     }
 
     private void compareHashMap() throws IOException {
@@ -120,7 +121,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             compareHashMap();
             if(!consenso) majorityVote();
             time += 1;
-            timeVote = time;
             placeManagerView.clear();
             try {
                 Thread.sleep(5*1000);
@@ -171,17 +171,16 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 switch (hash[0]) {
                     case "voto":
                         setVote(hash[2]);
-                        timeVote = -1;
                         break;
                     case "addPlace":
                        /* if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")) {
 
                         } else {*/
-                            orderLog = Integer.parseInt(hash[2]);
-                            key = Integer.parseInt(hash[2]) - 1;
-                            registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
-                            if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
-                            if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
+                        orderLog = Integer.parseInt(hash[2]);
+                        key = Integer.parseInt(hash[2]) - 1;
+                        registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
+                        if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
+                        if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
                         //}
                         break;
                     case "getPlace":
