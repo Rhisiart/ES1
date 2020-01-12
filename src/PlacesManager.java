@@ -1,3 +1,5 @@
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
+
 import java.io.IOException;
 import java.net.*;
 import java.rmi.Naming;
@@ -27,6 +29,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
 
     PlacesManager(int port2) throws IOException {
         urlPlace = "rmi://localhost:" + port2 + "/placelist";
+        timeWithViewPlaceManager.put(time,new ArrayList<>(placeManagerView));
         Thread t1 = (new Thread(() -> {
             try {
                 receivingSocket();
@@ -43,10 +46,10 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             }
         }));
         t2.start();
-        Thread t3= (new Thread(() -> {
+        /*Thread t3= (new Thread(() -> {
             if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
                 try {
-                    Thread.sleep(40*1000);
+                    Thread.sleep(60*1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -54,7 +57,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 exit=false;
             }
         }));
-        t3.start();
+        t3.start();*/
     }
 
     private void chooseLeader()  {
@@ -75,11 +78,12 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         for (String a : placeManagerView){
             PlacesListInterface p1 = (PlacesListInterface) Naming.lookup(a);
             ArrayList<Place> places = p1.allPlaces();
-            ArrayList<Place> clone = new ArrayList<>(placeArrayList);
-            clone.removeAll(places);
-            places.removeAll(placeArrayList);
-            System.out.println(clone);
-            System.out.println(places);
+            for (Place p : places) System.out.println(p.getLocality());
+            /*ArrayList<Place> clone = new ArrayList<>(placeArrayList);
+            clone.removeAll(places); // os place que o array places nao tem
+            places.removeAll(placeArrayList); // os place que o array clone nao tem
+            for (Place p : clone) System.out.println(p.getLocality() + " " + urlPlace);
+            for (Place p : places) System.out.println(p.getLocality() + " " + urlPlace);*/
         }
     }
 
@@ -97,7 +101,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         if (numVote == placeManagerView.size()) {
             majorLeader = vote;
             consenso = true;
+            orderLog = registryLog.size();
             voteHash.clear();
+            //if (!placeArrayList.isEmpty() && urlPlace.equals(majorLeader)) checkPlacesView();
         }
     }
 
@@ -134,13 +140,18 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+                try {
+                    Thread.sleep(5*1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }));
             t1.start();
             ArrayList<String> clone = new ArrayList<>(placeManagerView);
+            time += 1;
             timeWithViewPlaceManager.put(time, clone);
             compareHashMap();
             if(!consenso) majorityVote();
-            time += 1;
             placeManagerView.clear();
             try {
                 Thread.sleep(5*1000);
@@ -187,7 +198,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             s.receive(recv);
             String msg = new String(recv.getData());
             String[] hash = msg.split(",");
-            if (placeManagerView.contains(hash[1]) && !hash[0].equals("Alive")) {
+            if (timeWithViewPlaceManager.get(time).contains(hash[1]) && !hash[0].equals("Alive")) {
                 switch (hash[0]) {
                     case "voto":
                         if (!consenso) {
@@ -199,12 +210,11 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                        if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[2].equals("1")) {
 
                         } else {
-                        orderLog = Integer.parseInt(hash[2]);
-                        key = Integer.parseInt(hash[2]) - 1;
-                        registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
-                        if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
-                        if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
-                        }
+                           key = Integer.parseInt(hash[2]) - 1;
+                           registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
+                           if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
+                           if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
+                       }
                         break;
                     case "getPlace":
                         if (urlPlace.equals(majorLeader)) {
@@ -223,8 +233,6 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             }
             if(!placeManagerView.contains(hash[1])) placeManagerView.add(hash[1]);
 
-            //System.out.println("Mensagem recebida: " + msg);
-            //System.out.println("Pelo PlaceManager: " + urlPlace);
         }
         s.leaveGroup(addr);
         s.close();
