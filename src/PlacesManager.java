@@ -12,6 +12,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private static final long serialVersionUID = 1L;
     private HashMap<Integer,Place> registryLog = new HashMap<>();
     private ArrayList<Place> placeArrayList = new ArrayList<>();
+    private ArrayList<String> voteView = new ArrayList<>();
     private ArrayList<String> placeManagerView = new ArrayList<>();
     private HashMap<Integer,ArrayList<String>> timeWithViewPlaceManager = new HashMap<>();
     private HashMap<String,Integer> voteHash = new HashMap<>();
@@ -22,7 +23,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private String majorLeader = "";
     private String urlPlaceManager = "";
     private boolean exit = true;
-    private int time = 0,timeVote = 0, orderLog = 0, key = 0;
+    private int time = 0, orderLog = 0, key = 0;
     private boolean consenso = true;
 
     PlacesManager(int port2) throws IOException {
@@ -46,7 +47,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         Thread t3= (new Thread(() -> {
             if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
                 try {
-                    Thread.sleep(60*1000);
+                    Thread.sleep(100*1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -70,23 +71,40 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
         leader = biggestHash;
     }
-   
-    private void majorityVote() {
-        if (voteHash.size() == 1) {
+
+    private void checkPlacesView() throws RemoteException, NotBoundException, MalformedURLException {
+        for (String a : placeManagerView){
+            PlacesListInterface p1 = (PlacesListInterface) Naming.lookup(a);
+            ArrayList<Place> places = p1.allPlaces();
+            ArrayList<Place> clone = new ArrayList<>(placeArrayList);
+            clone.removeAll(places);
+            places.removeAll(placeArrayList);
+            System.out.println(clone);
+            System.out.println(places);
+        }
+    }
+
+    private void majorityVote()  {
+       if (voteHash.size() == 1) {
             for (Map.Entry<String, Integer> me : voteHash.entrySet()) {
                 if (me.getValue() == placeManagerView.size()) {
                     consenso = true;
                     majorLeader = me.getKey();
+                    //if (!placeArrayList.isEmpty() && urlPlace.equals(majorLeader)) checkPlacesView();
                 }
             }
         }
     }
 
-    private void setVote(String vote)
+    private void setVote(String vote,String whoVote)
     {
-        if(voteHash.isEmpty()) voteHash.put(vote,1);
-        else if(voteHash.containsKey(vote)) voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
-        else voteHash.clear();
+        if (!voteView.contains(whoVote)) {
+            voteView.add(whoVote);
+            if(voteHash.isEmpty()) voteHash.put(vote,1);
+            else if(voteHash.containsKey(vote))
+                voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
+            else {voteHash.clear(); voteView.clear();}
+        }
     }
 
     private void compareHashMap() throws IOException {
@@ -99,7 +117,14 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                     majorLeader = "";
                     consenso = false;
                     chooseLeader();
-                    sendingSocket("voto");
+                    Thread t1 = (new Thread(() -> {
+                        try {
+                            sendingSocket("voto");
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }));
+                    t1.start();
                     break;
                 }
             }
@@ -170,7 +195,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             if (placeManagerView.contains(hash[1]) && !hash[0].equals("Alive")) {
                 switch (hash[0]) {
                     case "voto":
-                        setVote(hash[2]);
+                        setVote(hash[2],hash[1]);
                         break;
                     case "addPlace":
                        /* if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")) {
