@@ -12,10 +12,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     private static final long serialVersionUID = 1L;
     private HashMap<Integer,Place> registryLog = new HashMap<>();
     private ArrayList<Place> placeArrayList = new ArrayList<>();
-    private ArrayList<String> voteView = new ArrayList<>();
     private ArrayList<String> placeManagerView = new ArrayList<>();
     private HashMap<Integer,ArrayList<String>> timeWithViewPlaceManager = new HashMap<>();
-    private HashMap<String,Integer> voteHash = new HashMap<>();
+    private HashMap<String,String> voteHash = new HashMap<>();
     private InetAddress addr;
     private static int port = 8888;
     private String urlPlace;
@@ -47,7 +46,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         Thread t3= (new Thread(() -> {
             if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
                 try {
-                    Thread.sleep(100*1000);
+                    Thread.sleep(40*1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -84,28 +83,24 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
     }
 
-    private void majorityVote()  {
-       if (voteHash.size() == 1) {
-            for (Map.Entry<String, Integer> me : voteHash.entrySet()) {
-                if (me.getValue() == placeManagerView.size()) {
-                    consenso = true;
-                    majorLeader = me.getKey();
-                    //if (!placeArrayList.isEmpty() && urlPlace.equals(majorLeader)) checkPlacesView();
+    private void majorityVote() throws RemoteException, NotBoundException, MalformedURLException {
+        int numVote = 0;
+        String vote = "";
+        if(voteHash.size() == placeManagerView.size()) {
+            for (Map.Entry<String, String> me : voteHash.entrySet()) {
+                if (vote.isEmpty() || me.getValue().equals(vote)) {
+                    vote = me.getValue();
+                    numVote++;
                 }
             }
         }
-    }
-
-    private void setVote(String vote,String whoVote)
-    {
-        if (!voteView.contains(whoVote)) {
-            voteView.add(whoVote);
-            if(voteHash.isEmpty()) voteHash.put(vote,1);
-            else if(voteHash.containsKey(vote))
-                voteHash.replace(vote,voteHash.get(vote),voteHash.get(vote) + 1);
-            else {voteHash.clear(); voteView.clear();}
+        if (numVote == placeManagerView.size()) {
+            majorLeader = vote;
+            consenso = true;
+            voteHash.clear();
         }
     }
+
 
     private void compareHashMap() throws IOException {
         if (timeWithViewPlaceManager.containsKey(time) && timeWithViewPlaceManager.containsKey(time-1))
@@ -131,7 +126,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
     }
 
-    private void heartBeats() throws IOException{
+    private void heartBeats() throws IOException, NotBoundException {
         while (exit) {
             Thread t1 = (new Thread(() -> {
                 try {
@@ -195,18 +190,21 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             if (placeManagerView.contains(hash[1]) && !hash[0].equals("Alive")) {
                 switch (hash[0]) {
                     case "voto":
-                        setVote(hash[2],hash[1]);
+                        if (!consenso) {
+                            if (!voteHash.containsKey(hash[1])) voteHash.put(hash[1], hash[2]);
+                            else voteHash.replace(hash[1], hash[2]);
+                        }
                         break;
                     case "addPlace":
-                       /* if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[1].equals("1")) {
+                       if (urlPlace.equals("rmi://localhost:2028/placelist") && hash[2].equals("1")) {
 
-                        } else {*/
+                        } else {
                         orderLog = Integer.parseInt(hash[2]);
                         key = Integer.parseInt(hash[2]) - 1;
                         registryLog.put(Integer.parseInt(hash[2]), new Place(hash[3], hash[4]));
                         if (!urlPlace.equals(majorLeader)) placeArrayList.add(new Place(hash[3], hash[4]));
                         if (!registryLog.containsKey(key) && key != 0) sendingSocket("getPlace");
-                        //}
+                        }
                         break;
                     case "getPlace":
                         if (urlPlace.equals(majorLeader)) {
