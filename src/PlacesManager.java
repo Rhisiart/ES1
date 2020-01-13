@@ -33,7 +33,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         Thread t1 = (new Thread(() -> {
             try {
                 receivingSocket();
-            } catch (IOException e) {
+            } catch (IOException | NotBoundException e) {
                 e.printStackTrace();
             }
         }));
@@ -46,8 +46,8 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             }
         }));
         t2.start();
-        /*Thread t3= (new Thread(() -> {
-            if(urlPlace.equals("rmi://localhost:" + 2030 + "/placelist")) {
+        Thread t3= (new Thread(() -> {
+            if(urlPlace.equals("rmi://localhost:2030/placelist")) {
                 try {
                     Thread.sleep(60*1000);
                 } catch (InterruptedException e) {
@@ -57,7 +57,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                 exit=false;
             }
         }));
-        t3.start();*/
+        t3.start();
     }
 
     private void chooseLeader()  {
@@ -74,20 +74,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         leader = biggestHash;
     }
 
-    private void checkPlacesView() throws RemoteException, NotBoundException, MalformedURLException {
-        for (String a : placeManagerView){
-            PlacesListInterface p1 = (PlacesListInterface) Naming.lookup(a);
-            ArrayList<Place> places = p1.allPlaces();
-            for (Place p : places) System.out.println(p.getLocality());
-            /*ArrayList<Place> clone = new ArrayList<>(placeArrayList);
-            clone.removeAll(places); // os place que o array places nao tem
-            places.removeAll(placeArrayList); // os place que o array clone nao tem
-            for (Place p : clone) System.out.println(p.getLocality() + " " + urlPlace);
-            for (Place p : places) System.out.println(p.getLocality() + " " + urlPlace);*/
-        }
-    }
-
-    private void majorityVote() throws RemoteException, NotBoundException, MalformedURLException {
+    private void majorityVote() throws IOException{
         int numVote = 0;
         String vote = "";
         if(voteHash.size() == placeManagerView.size()) {
@@ -103,7 +90,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             consenso = true;
             orderLog = registryLog.size();
             voteHash.clear();
-            //if (!placeArrayList.isEmpty() && urlPlace.equals(majorLeader)) checkPlacesView();
+            if (urlPlace.equals(majorLeader)) sendingSocket("checkPlaces");
         }
     }
 
@@ -180,6 +167,9 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
             case "addLostPlace":
                 msgPlusUrl = msg + "," + urlPlace + "," + key + "," + urlPlaceManager + "," + registryLog.get(key).getPostalCode() + "," + registryLog.get(key).getLocality();
                 break;
+            case "checkPlaces":
+                msgPlusUrl = msg + "," + urlPlace + ",";
+                break;
         }
         DatagramPacket hi = new DatagramPacket(msgPlusUrl.getBytes(), msgPlusUrl.getBytes().length, addr, port);
         DatagramSocket dS = new DatagramSocket();
@@ -188,7 +178,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     }
 
     /**simulacao de uma mensagem que nao chegou**/
-    private void receivingSocket() throws IOException{
+    private void receivingSocket() throws IOException, NotBoundException {
         addr = InetAddress.getByName("224.0.0.3");
         MulticastSocket s = new MulticastSocket(port);
         s.joinGroup(addr);
@@ -228,6 +218,20 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                             registryLog.put(Integer.parseInt(hash[2]), new Place(hash[4], hash[5]));
                             placeArrayList.add(new Place(hash[4], hash[5]));
                         }
+                        break;
+                    case "checkPlaces":
+                        //System.out.println("Aqui " + urlPlace + " " + placeManagerView.isEmpty());
+                        for (String a : timeWithViewPlaceManager.get(time))
+                        {
+                            if (!a.equals(urlPlace)) {
+                                System.out.println("aquiiiiiiii" + " " + urlPlace);
+                                PlacesListInterface p1 = (PlacesListInterface) Naming.lookup(a);
+                                ArrayList<Place> place = p1.allPlaces();
+                                place.removeAll(placeArrayList); // os place que o array placeArrayList nao tem
+                                placeArrayList.addAll(place);
+                            }
+                        }
+                        if (urlPlace.equals("rmi://localhost:2028/placelist")) System.out.println(placeArrayList.size());
                         break;
                 }
             }
