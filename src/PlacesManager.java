@@ -95,7 +95,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
     }
 
 
-    private void compareHashMap() throws IOException {
+    private void compareHashMap(){
         if (timeWithViewPlaceManager.containsKey(time) && timeWithViewPlaceManager.containsKey(time-1))
         {
             for (String a : timeWithViewPlaceManager.get(time))
@@ -119,7 +119,7 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
         }
     }
 
-    private void heartBeats() throws IOException, NotBoundException {
+    private void heartBeats() throws IOException{
         while (exit) {
             Thread t1 = (new Thread(() -> {
                 try {
@@ -220,15 +220,16 @@ public class PlacesManager extends UnicastRemoteObject implements PlacesListInte
                         }
                         break;
                     case "checkPlaces":
-                        //System.out.println("Aqui " + urlPlace + " " + placeManagerView.isEmpty());
                         for (String a : timeWithViewPlaceManager.get(time))
                         {
                             if (!a.equals(urlPlace)) {
-                                System.out.println("aquiiiiiiii" + " " + urlPlace);
                                 PlacesListInterface p1 = (PlacesListInterface) Naming.lookup(a);
                                 ArrayList<Place> place = p1.allPlaces();
                                 place.removeAll(placeArrayList); // os place que o array placeArrayList nao tem
-                                placeArrayList.addAll(place);
+                                for (Place p : place){
+                                    placeArrayList.add(p);
+                                    registryLog.put(registryLog.size() + 1, p);
+                                }
                             }
                         }
                         if (urlPlace.equals("rmi://localhost:2028/placelist")) System.out.println(placeArrayList.size());
